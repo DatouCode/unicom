@@ -1,19 +1,18 @@
-let body = {
-    'typeScreenCondition': '2',
-    'category': 'FFLOWPACKET',
-    'pageSign': '1',
-    'CALLBACKURL': 'https://m.client.10010.com/myPrizeForActivity/querywinninglist.htm'
-  }
+const redis = require('redis');
+const {promisifyAll} = require('bluebird')
+promisifyAll(redis);
 
 
-function obj2str(obj){
-	/**
-	 * @param {obj}  需要转换的对象
-	 * @return {string} 返回key1=val1,key2=val2....格式
-	 */
-	let w = Object.entries(obj);
-	w.forEach((v,i)=>{w[i]=v.join('=')});
-	return w.join('&');
-}
+const runApplication = async () => {
+  // Connect to redis at 127.0.0.1 port 6379 no password.
+  const client = redis.createClient({
+    host: '127.0.0.1',
+    port: 6379,
+    password: '123456'
+  });
 
-console.log(obj2str(body))
+  const fooValue = await client.getAsync('17601551626');
+  console.log(fooValue);
+};
+
+runApplication();

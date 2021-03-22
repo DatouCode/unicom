@@ -1,9 +1,15 @@
 const crypto = require('crypto');
 const axios = require('axios');
-const moment = require('moment')
-const asyncRedis = require("async-redis");
-const client = asyncRedis.createClient();
-const fs = require('fs');
+const moment = require('moment');
+const redis = require('redis');
+const {promisifyAll} = require('bluebird');
+promisifyAll(redis);
+
+const client = redis.createClient({
+  'host': '',
+  'port': 0,
+  'password': ''
+});
 
 const publicKey = `-----BEGIN PUBLIC KEY-----
 MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDc+CZK9bBA9IU+gZUOc6
@@ -62,7 +68,7 @@ async function login() {
       myCookie += cookie.split(';')[0] + ';';
   });
   console.log('cookie:', myCookie);
-  await client.set(mobile, myCookie);
+  await client.setAsync(mobile, myCookie);
   return myCookie;
 }
 
@@ -170,7 +176,7 @@ async function active() {
 }
 
 !(async () => {
-  myCookie = await client.get(mobile);
+  myCookie = await client.getAsync(mobile);
   if (!myCookie) {
     myCookie = await login();
     console.log('新建cookie：', myCookie)
