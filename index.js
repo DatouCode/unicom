@@ -5,11 +5,10 @@ const redis = require('redis');
 const {promisifyAll} = require('bluebird');
 promisifyAll(redis);
 
-const client = redis.createClient({
-  'host': '',
-  'port': 0,
-  'password': ''
-});
+
+const [mobile, password] = ['', ''];
+// VPS
+const client = redis.createClient({'host': '', 'port': 6379, 'password': ''});
 
 const publicKey = `-----BEGIN PUBLIC KEY-----
 MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDc+CZK9bBA9IU+gZUOc6
@@ -38,7 +37,6 @@ let obj2str = function (obj) {
   return w.join('&');
 }
 
-let [mobile, password] = ['手机号', '服务密码'];
 let [mobile_crypto, password_crypto] = [encodeURIComponent(encode(mobile)), encodeURIComponent(encode(password))];
 let myCookie = '';
 let headers = {
@@ -67,7 +65,7 @@ async function login() {
     if (cookie.indexOf('ecs_token') > -1)
       myCookie += cookie.split(';')[0] + ';';
   });
-  console.log('cookie:', myCookie);
+  console.log('新建cookie:', myCookie);
   await client.setAsync(mobile, myCookie);
   return myCookie;
 }
@@ -112,9 +110,9 @@ async function query(data) {
     resource.details.forEach(detail => {
       if (detail['addUpItemName']) {
         let addUpItemName = detail['addUpItemName'];  // 名称
-        let use = detail['use'];  // 已使用
-        let remain = detail['remain'];  // 剩余
-        let usedPercent = detail['usedPercent'] + '%';  // 已用百分比
+        let use = Math.round(detail['use']);  // 已使用
+        let remain = Math.round(detail['remain']);  // 剩余
+        let usedPercent = Math.round(detail['usedPercent']) + '%';  // 已用百分比
         console.log(index, addUpItemName, use, remain, usedPercent);
         index++; // 序号
       }
@@ -166,30 +164,28 @@ async function active() {
   // console.log(data);  // html
   // 流量包ID
   bag = bag.match(/onclick="toDetailPage\((.*)\);"/)[1].replace(/'/g, "").split(',');
-  // console.log(bag);
   // 激活流量包
   activeHeaders['Referer'] = 'http://m.client.10010.com/myPrizeForActivity/queryPrizeDetails.htm';
   body = `activeCode=${bag[0]}&prizeRecordID=${bag[1]}&activeName=%E5%81%9A%E4%BB%BB%E5%8A%A1%E9%A2%86%E5%A5%96%E5%93%81`;
   let {data} = await axios.post('https://m.client.10010.com/myPrizeForActivity/myPrize/activationFlowPackages.htm', body, {headers: activeHeaders});
-  console.log('激活流量包：', data)
-
+  console.log('激活流量包：', JSON.stringify(data))
 }
 
 !(async () => {
   myCookie = await client.getAsync(mobile);
   if (!myCookie) {
     myCookie = await login();
-    console.log('新建cookie：', myCookie)
   } else {
     console.log('读取到cookie缓存');
   }
 
   let data = await checkCookie();
   await query(data);  // 查询套餐余量
-  // await sign();  // 签到
-  // await video();  // 看视频任务
-  // await get1GB();  // 完成签到和看视频后，领取1GB
-  // await active();  // 领取后，激活1GB
+
+/*  await sign();  // 签到
+  await video();  // 看视频任务
+  await get1GB();  // 完成签到和看视频后，领取1GB
+  await active();  // 领取后，激活1GB*/
 
   await client.quit();
 })();
