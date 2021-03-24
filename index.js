@@ -6,9 +6,9 @@ const {promisifyAll} = require('bluebird');
 promisifyAll(redis);
 
 
-const [mobile, password] = ['', ''];
+const [mobile, password] = ['17612564039', ''];
 // VPS
-const client = redis.createClient({'host': '', 'port': 6379, 'password': ''});
+const client = redis.createClient({'host': '47.241.110.57', 'port': 6379, 'password': 'redis123456'});
 
 const publicKey = `-----BEGIN PUBLIC KEY-----
 MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDc+CZK9bBA9IU+gZUOc6
@@ -46,6 +46,12 @@ let headers = {
   'origin': 'https://img.client.10010.com',
   'accept-language': 'zh-cn',
   'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 12_4_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 unicom{version:iphone_c@8.0200}{systemVersion:dis}{yw_code:}',
+}
+
+function wait(timeout) {
+  return new Promise(resolve => {
+    setTimeout(resolve, timeout)
+  })
 }
 
 async function login() {
@@ -106,7 +112,10 @@ async function checkCookie() {
 async function query(data) {
   let resources = data['resources'];
   let index = 1;
+  let flowUse = 0, flowLeft = 0;
+  // 套餐分类
   resources.forEach(resource => {
+    // 流量、语音、短信...
     resource.details.forEach(detail => {
       if (detail['addUpItemName']) {
         let addUpItemName = detail['addUpItemName'];  // 名称
@@ -115,9 +124,16 @@ async function query(data) {
         let usedPercent = Math.round(detail['usedPercent']) + '%';  // 已用百分比
         console.log(index, addUpItemName, use, remain, usedPercent);
         index++; // 序号
+
+        // 剩余总流量
+        if (addUpItemName.indexOf('流量') > -1) {
+          flowUse += use;
+          flowLeft += remain
+        }
       }
     })
   })
+  console.log('已使用', flowUse, '，剩余', flowLeft);
 }
 
 async function video() {
@@ -136,6 +152,7 @@ async function get1GB() {
     headers: {...headers, cookie: myCookie},
   })
   console.log('领取1GB：', JSON.stringify(data));
+  await wait(1500);
 }
 
 async function active() {
@@ -171,6 +188,84 @@ async function active() {
   console.log('激活流量包：', JSON.stringify(data))
 }
 
+async function water() {
+  // let res = await axios.post('https://m.client.10010.com/mactivity/arbordayJson/arbor/3/0/3/grow.htm',{},{headers:{cookie:myCookie}}).then(res=>{return res.data})
+  // console.log(res.data.addedValue);
+  let res = await axios.post('https://m.client.10010.com/mactivity/arbordayJson/getChanceByIndex.htm?index=0', {}, {headers: {cookie: myCookie}}).then(res => {
+    return res.data
+  })
+  console.log(res.data.addedValue);
+
+  // res = requests.post('https://m.client.10010.com/mactivity/arbordayJson/arbor/3/0/3/grow.htm', cookies=self.cookies)
+  // print(res.json()['data']['addedValue'])
+}
+
+async function tree() {
+  /*
+  for(let i=9;i<12;i++){
+    await axios.get(`https://m.client.10010.com/mactivity/task/watchPage.htm?taskId=${i}`,{headers:{cookie:myCookie}})
+  }
+   */
+
+  let res = await axios.post('https://m.client.10010.com/mactivity/arbordayJson/index.htm', {}, {
+    headers: {
+      'Host': 'm.client.10010.com',
+      'origin': 'https://img.client.10010.com',
+      'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 12_4_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 unicom{version:iphone_c@8.0200}{systemVersion:dis}{yw_code:}',
+      'referer': `https://img.client.10010.com/mactivity/woTree/index.html?ticket=mypjnmpi41d7d357211e6c8afab48a8e3a3b8e34fapbfhfq&type=06&version=iphone_c@8.0200&timestamp=20210317203849&desmobile=${mobile}&num=0&postage=cc133b59923922f4b4c353d4635fd29b&duanlianjieabc=qA504&userNumber=${mobile}`,
+      'cookie': myCookie
+    }
+  }).then(res => {
+    return res.data
+  })
+
+  let treeHeaders = {
+    'Host': 'm.client.10010.com',
+    'accept': '*/*',
+    'origin': 'https://img.client.10010.com',
+    'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 12_4_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 unicom{version:iphone_c@8.0200}{systemVersion:dis}{yw_code:}',
+    'accept-language': 'zh-cn',
+    'referer': `https://img.client.10010.com/mactivity/woTree/index.html?version=iphone_c@8.0200&desmobile=${mobile}&yw_code=&time=${new Date().getTime()}`,
+    'cookie': myCookie
+  };
+  // let flowChangeList = [...res.data['flowChangeList'], ...res.data['popList']];
+  let flowChangeList = res.data['flowChangeList'];
+
+  for (let i = 0; i < flowChangeList.length; i++) {
+    console.log(flowChangeList[i])
+    // 20M，先领4M
+    if (flowChangeList[i]['countTransFlowStr'] === '20') {
+      console.log('20 分')
+      await axios.get(`https://m.client.10010.com/mactivity/flowData/takeFlow.htm?flowId=${flowChangeList[i].id}`, {headers: treeHeaders}).then(res => {
+        console.log('领取树果实：', JSON.stringify(res.data))
+      })
+    }
+    await axios.get(`https://m.client.10010.com/mactivity/flowData/refresh.htm?flowId=${flowChangeList[i].id}`, {headers: treeHeaders}).then(res => {
+      console.log('领取树果实：', JSON.stringify(res.data))
+    })
+  }
+}
+
+async function integral() {
+  let integralHeaders = {
+    'Host': 'm.client.10010.com',
+    'accept': 'application/json, text/plain, */*',
+    'content-type': 'application/x-www-form-urlencoded',
+    'origin': 'https://img.client.10010.com',
+    'accept-language': 'zh-cn',
+    'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 12_4_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 unicom{version:iphone_c@8.0200}{systemVersion:dis}{yw_code:}',
+    'referer': 'https://img.client.10010.com/welfaremall/getpoints/?floortype=tbanner&from=9110001000%E2%80%8B&oneid=undefined&twoid=undefined',
+    'cookie': myCookie
+  }
+  await axios.post('https://m.client.10010.com/welfare-mall-front/mobile/integral/gettheintegral/v1', {from: '98880000020'}, {headers: integralHeaders}).then(res => {
+    console.log('定向积分：', res.data['msg'])
+  })
+  integralHeaders.referer = 'https://img.client.10010.com/winter_activity/?floortype=tbanner&from=9110001000%E2%80%8B&oneid=undefined&twoid=undefined';
+  await axios.post('https://m.client.10010.com/welfare-mall-front/mobile/winterTwo/getIntegral/v1', {from: '9110001000%E2%80%8B'}, {headers: integralHeaders}).then(res => {
+    console.log('定向积分：', res.data['resdata']['desc'])
+  })
+}
+
 !(async () => {
   myCookie = await client.getAsync(mobile);
   if (!myCookie) {
@@ -182,10 +277,16 @@ async function active() {
   let data = await checkCookie();
   await query(data);  // 查询套餐余量
 
-/*  await sign();  // 签到
+  /*
+  await sign();  // 签到
   await video();  // 看视频任务
   await get1GB();  // 完成签到和看视频后，领取1GB
-  await active();  // 领取后，激活1GB*/
+  await active();  // 领取后，激活1GB
+  */
+
+  // await water(); // 沃之树浇水
+  // await tree(); // 收取树果实
+  // await integral(); // 领取定向积分
 
   await client.quit();
 })();
